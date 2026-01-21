@@ -1,0 +1,153 @@
+.chat-box{
+    height: 75vh;
+    position: relative;
+    background-color: #f1f5ff;
+}
+.chat-user{
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #d1d1d1;
+}
+.chat-user img{
+    width :25px;
+    border-radius: 50%;
+}
+.chat-user img:first-child{
+    width: 38px;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+}
+.chat-user{
+    flex: 1;
+    font-weight: 500;
+    font-size: 20px;
+    color: #393939;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.chat-input{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 15px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+}
+ .chat-input img{
+    width: 20px;
+    cursor: pointer;
+ }
+ .chat-input label{
+    display: flex;
+
+ }
+ .chat-input label img{
+    width: 22px;
+ }
+
+ .chat-input input{
+    flex: 1;
+    border: none;
+    outline: none;
+ }
+ .chat-msg{
+    height: calc(100% - 70px);
+    padding-bottom: 50px;
+    overflow-y: scroll;
+    display: flex;
+    flex-direction: column-reverse;
+ }
+
+ .chat-msg::-webkit-scrollbar{
+    width: 5px;
+}
+.chat-msg::-webkit-scrollbar-thumb{
+    background: #c6c6c6;
+    border-radius: 10px;
+}
+
+ .s-msg div img,
+ .r-msg div img{
+    width: 27px;
+    aspect-ratio: 1/1;
+    border-radius: 50px;
+ }
+ .s-msg, .r-msg {
+    display: flex;
+    align-items: flex-end; /* Căn avatar xuống đáy dòng */
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 0px 15px;
+    margin-bottom: 20px; /* Khoảng cách giữa các tin nhắn */
+}
+ .r-msg{
+    flex-direction: row-reverse;
+    justify-content: start;
+ }
+.msg {
+    color: white;
+    background-color: #077EFF;
+    padding: 10px 15px;
+    border-radius: 8px 8px 0px 8px;
+    font-size: 14px;
+    font-weight: 300;
+    
+    /* --- CÁC DÒNG QUAN TRỌNG CHỐNG TRÀN --- */
+    max-width: 85%;            /* Giới hạn chiều rộng tin nhắn */
+    word-wrap: break-word;     /* Xuống dòng từ dài */
+    word-break: break-word;    
+    overflow-wrap: break-word; 
+    white-space: pre-wrap;     /* Giữ định dạng xuống dòng của user */
+}
+ .r-msg .msg{
+    border-radius: 8px 8px 8px 0px;
+ }
+ .s-msg div,
+ .r-msg div{
+    text-align: center;
+    font-size: 9px;
+ }
+ .msg-img{
+    max-width: 200px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+
+ }
+ .chat-welcome{
+   width: 100%;
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   justify-content: center;
+   gap: 5px;
+ }
+ .chat-welcome img{
+   width: 60px;
+ }
+ .chat-welcome p{
+    font-size: 20px;
+    font-weight: 500;
+    color: #383838;
+ }
+.chat-user .arrow{
+   display: none;
+}
+ @media (max-width :900px) {
+   .chat-box{
+      width: 100%;
+      justify-content: center ;
+   }
+   .chat-user .arrow{
+      display: block;
+   }
+   .chat-user .help{
+      display: none;
+   }
+   
+ }
