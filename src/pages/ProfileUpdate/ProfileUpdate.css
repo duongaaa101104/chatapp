@@ -56,3 +56,46 @@ textarea{
     font-size: 16px;
     cursor: pointer;
 }
+@media (max-width: 800px) {
+    
+    .profile-container {
+        /* Thu nhỏ chiều rộng khung trên tablet/mobile */
+        min-width: auto;
+        width: 90%; 
+        padding: 30px;
+        
+        /* Chuyển sang xếp dọc thay vì xếp ngang */
+        flex-direction: column-reverse; 
+        gap: 30px;
+    }
+
+    /* Form chiếm toàn bộ chiều rộng container */
+    .profile-container form {
+        max-width: 100%;
+    }
+
+    /* Ảnh đại diện trang trí */
+    .profile-pic {
+        margin-left: 0;
+        max-width: 120px;
+        margin-bottom: 20px;
+    }
+}
+
+@media (max-width: 450px) {
+    .profile-container {
+        padding: 20px;
+        width: 95%;
+    }
+
+    /* Trên màn hình điện thoại nhỏ, ẩn luôn ảnh to trang trí cho đỡ chật */
+    /* Vì đã có ảnh nhỏ trong phần upload rồi */
+    .profile-pic {
+        display: none;
+    }
+
+    .profile-container h3 {
+        font-size: 20px;
+        text-align: center;
+    }
+}
