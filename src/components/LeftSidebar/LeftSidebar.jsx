@@ -10,13 +10,12 @@ import { toast } from 'react-toastify'
 const LeftSidebar = () => {
 
     const navigate = useNavigate();
-    // 1. SỬA TÊN BIẾN: messageId -> messagesId (số nhiều) để khớp với ChatBox và AppContext của bạn
-    const { userData, chatData, chatUser, setChatUser, messagesId, setMessagesId ,chatVisible,setChatVisible } = useContext(AppContext);
+
+    const { userData, chatData, chatUser, setChatUser, messagesId, setMessagesId ,chatVisible,setChatVisible  } = useContext(AppContext);
     const [allUsers, setAllUsers] = useState([]);
     const [showSearch, setShowSearch] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Tải danh sách tất cả user (chỉ dùng để tìm kiếm)
     useEffect(() => {
         const loadAllUsers = async () => {
             try {
@@ -45,10 +44,10 @@ const LeftSidebar = () => {
         setSearchQuery(""); 
         setShowSearch(false);
     }
-
+    //
     const openChat = async (item) => {
         setChatUser(item);
-        // 2. Dùng đúng hàm setMessagesId
+
         setMessagesId(item.messageId);
 setChatVisible(true);
         if (!item.messageSeen) {
@@ -124,9 +123,9 @@ setChatVisible(true);
                     <div className="menu">
                         <img src={assets.menu_icon} alt="" />
                         <div className="sub-menu">
-                            <p onClick={() => navigate('/profile')}>Edit Profile</p>
+                            <p onClick={() => navigate('/profile')}>Hồ sơ</p>
                             <hr />
-                            <p onClick={() => logout()}>Logout</p>
+                            <p onClick={() => logout()}>Đăng xuất</p>
                         </div>
                     </div>
                 </div>
@@ -145,7 +144,7 @@ setChatVisible(true);
                             <img src={item.avatar} alt='' />
                             <p>{item.name}</p>
                         </div>
-                    )) : <p className='no-result'>No Name</p>
+                    )) : <p className='no-result'>Không có tên</p>
                 ) 
                 : (
                     // --- GIAO DIỆN DANH SÁCH CHAT ---

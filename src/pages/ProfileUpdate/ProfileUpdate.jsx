@@ -85,20 +85,20 @@ const ProfileUpdate = () => {
         <div className='profile'>
             <div className="profile-container">
                 <form onSubmit={profileUpdate} >
-                    <h3>Profile Details</h3>
+                    <h3>Chỉnh sửa hồ sơ</h3>
                     <label htmlFor="avatar">
                         <input
                             onChange={(e) => setImage(e.target.files[0])}
                             type="file" id='avatar' accept='.png, .jpg, .jpeg' hidden />
                         <img src={image ? URL.createObjectURL(image) : prevImage ? prevImage : assets.avatar_icon} alt="" />
-                        upload profile image
+                        Tải ảnh lên
                     </label>
-                    <input onChange={(e) => setName(e.target.value)} value={name} type="text" placeholder='Your Name' required />
+                    <input onChange={(e) => setName(e.target.value)} value={name} type="text" placeholder='Tên của ban' required />
                     
                     {/* 4. Sửa lỗi: e.target.bio -> e.target.value */}
-                    <textarea onChange={(e) => setBio(e.target.value)} value={bio} placeholder='Write profile bio' required></textarea>
+                    <textarea onChange={(e) => setBio(e.target.value)} value={bio} placeholder=' Viết những gì bạn thích' required></textarea>
                     
-                    <button type='submit'>Save Profile</button>
+                    <button type='submit'>Lưu hồ sơ</button>
                 </form>
                 
                 {/* Ảnh bên phải cũng hiển thị đúng logic */}

@@ -18,7 +18,7 @@ useEffect(()=>{
     <div className='chat'>
       {
         loading
-        ? <p className='loading'>Loading...</p>
+        ? <p className='loading'>Đang tải...</p>
         :<div className="chat-container">
         <LeftSideBar />
         <ChatBox />

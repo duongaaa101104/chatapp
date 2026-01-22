@@ -5,49 +5,48 @@ import { logout } from '../../config/firebase'
 import { AppContext } from '../../context/AppContext'
 const RightSidebar = () => {
 
-  const {chatUser ,messages} = useContext(AppContext);
-  const [msgImages,setMsgImages]=useState([]);
+  const { chatUser, messages, rightSidebarVisible, setRightSidebarVisible } = useContext(AppContext);
+  const [msgImages, setMsgImages] = useState([]);
 
 
-  useEffect(()=>{
-    let temVar =[];
-    messages.map((msg)=>{
-      if(msg.image){
+  useEffect(() => {
+    let temVar = [];
+    messages.map((msg) => {
+      if (msg.image) {
         temVar.push(msg.image)
       }
     })
     setMsgImages(temVar);
-  },[messages])
+  }, [messages])
 
   return chatUser ? (
-    <div className='rs'>
+    <div className={`rs ${rightSidebarVisible ? "rs-show" : ""}`}>
+      <div className="rs-mobile-header">
+                <img onClick={() => setRightSidebarVisible(false)} src={assets.arrow_icon} alt="Back" />
+                <p>Thông tin </p>
+            </div>
       <div className="rs-profile">
         <img src={chatUser.userData.avatar} alt="" />
-        <h3>{Date.now() - chatUser.userData.lastSeen <=6000 ? <img src={assets.green_dot} className='dot' alt="" /> : null} {chatUser.userData.name} </h3>
-        <p>{chatUser.userData.bio}</p> 
+        <h3>{Date.now() - chatUser.userData.lastSeen <= 6000 ? <img src={assets.green_dot} className='dot' alt="" /> : null} {chatUser.userData.name} </h3>
+        <p>{chatUser.userData.bio}</p>
       </div>
-        <hr />
+      <hr />
 
-        <div className="rs-media">
-          <p>Media</p>
-          <div>
-            {msgImages.map((url,index)=>(<img onClick={()=>window.open(url)}  key={index} src={url} alt='' />))}
-            {/* <img src={assets.pic1} alt="" />
-            <img src={assets.pic2} alt="" />
-            <img src={assets.pic3} alt="" />
-            <img src={assets.pic4} alt="" />
-            <img src={assets.pic2} alt="" />
-            <img src={assets.pic3} alt="" /> */}
-          </div>
+      <div className="rs-media">
+        <p>Hình ảnh</p>
+        <div>
+          {msgImages.map((url, index) => (<img onClick={() => window.open(url)} key={index} src={url} alt='' />))}
         </div>
-        <button onClick={()=>logout()} >Logout</button>
+        
+      </div>
+      <button onClick={() => logout()} >Đăng xuất</button>
     </div>
   )
-  :(
-    <div className='rs'>
-        <button onClick={()=>logout()} >Logout</button>
-    </div>
-  )
+    : (
+      <div className='rs'>
+        <button onClick={() => logout()} >Đăng xuất</button>
+      </div>
+    )
 }
 
 export default RightSidebar

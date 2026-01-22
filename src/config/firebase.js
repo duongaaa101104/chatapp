@@ -44,7 +44,6 @@ const signup = async (username, email, password) => {
         
     } catch (error) {
         console.error(error)
-        // SỬA LỖI: Thêm [1] để lấy chuỗi lỗi trước khi split tiếp
         if (error.code) {
              toast.error(error.code.split('/')[1].split('-').join(" "));
         } else {
@@ -59,7 +58,6 @@ const login = async(email, password) => {
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
         console.error(error);
-        // SỬA LỖI TƯƠNG TỰ
         if (error.code) {
              toast.error(error.code.split('/')[1].split('-').join(" "));
         } else {
@@ -74,7 +72,6 @@ const logout = async () => {
         await signOut(auth)
     } catch (error) {
         console.error(error);
-        // SỬA LỖI TƯƠNG TỰ
         if (error.code) {
              toast.error(error.code.split('/')[1].split('-').join(" "));
         } else {

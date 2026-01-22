@@ -8,8 +8,6 @@
 .rs-profile{
     padding-top: 60px ;
     text-align: center;
-    max-width: 70%;
-    margin: auto;
 }
 .rs-profile img{
     width: 110px;
@@ -52,12 +50,13 @@
     font-size: 13px;
 }
 .rs-media div{
-    max-width: 180px;
+    max-width: 100%;
     overflow-y: scroll;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 5px;
     margin-top: 8px;
+   
 }
 .rs-media div img{
     width: 60px;
@@ -78,9 +77,61 @@
     border-radius: 20px;
     cursor: pointer;
 }
+
+
+.rs-mobile-header {
+    display: none; 
+    align-items: center;
+    gap: 15px;
+    padding: 15px 20px;
+    border-bottom: 1px solid #919191;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.rs-mobile-header img {
+    width: 25px;
+    cursor: pointer;
+}
+
+.rs-mobile-header p {
+    font-size: 18px;
+    font-weight: 500;
+    color: #ffffff;
+    margin: 0;
+}
+
+
 @media(max-width : 900px) {
     .rs{
-        display: none;
+     display: none;
+        
+        position: absolute; /* Đè lên ChatBox */
+        top: 0;
+        left: 0;
+        flex-direction: column;
+        overflow-y: scroll;
+        width: 100% !important; /* Bung full chiều ngang */
+        height: 100vh !important; /* Bung full chiều dọc */
+        max-width: 100% !important;
+        border-radius: 0 !important; /* Bỏ bo góc để vuông vức */
     }
-    
+    .rs.rs-show {
+        display: flex; /* Hiện lên */
+    }
+
+    .rs-mobile-header {
+        display: flex;
+    }
+
+    /* 2. Cấu hình lại RightSidebar khi hiện trên mobile */
+    .rs {
+        /* Các thuộc tính cũ giữ nguyên hoặc ghi đè tại đây */
+        padding-top: 0 !important; /* Bỏ padding top cũ để header sát lề */
+    }
+
+    /* 3. Đảm bảo nút Logout không bị dính */
+    .rs button {
+        margin-bottom: 30px;
+    }
 }
