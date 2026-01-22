@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState, useRef } from 'react'
+import React, { useContext, useEffect, useState, useRef, useCallback } from 'react'
 import './ChatBox.css'
 import assets from '../../assets/assets'
 import { AppContext } from '../../context/AppContext'
@@ -6,27 +6,30 @@ import { onSnapshot, arrayUnion, doc, updateDoc, getDoc } from 'firebase/firesto
 import { db } from '../../config/firebase'
 import { toast } from 'react-toastify'
 import upload from '../../lib/upload'
-import EmojiPicker from 'emoji-picker-react' // 1. IMPORT THƯ VIỆN
+import EmojiPicker from 'emoji-picker-react'
 
 const ChatBox = () => {
 
-    const { userData, setMessages, chatUser, messages, messagesId, chatVisible, setChatVisible, setRightSidebarVisible, chatData, setChatUser, setMessagesId } = useContext(AppContext)
+    const { userData, chatUser, messages, messagesId, chatVisible, setChatVisible, setRightSidebarVisible, chatData, setChatUser, setMessagesId, setMessages } = useContext(AppContext)
+    
+    // States
     const [input, setInput] = useState("")
-    const [userProfile, setUserProfile] = useState(null);
-    const [isTyping, setIsTyping] = useState(false);
-    const [openEmoji, setOpenEmoji] = useState(false); // 2. STATE BẬT TẮT EMOJI
+    const [userProfile, setUserProfile] = useState(null)
+    const [isTyping, setIsTyping] = useState(false)
+    const [openEmoji, setOpenEmoji] = useState(false)
+    const [msgInfo, setMsgInfo] = useState(null)
+    const [editingMsg, setEditingMsg] = useState(null)
 
-    const typingTimeoutRef = useRef(null);
+    const [zoomImage, setZoomImage] = useState(null);
 
+    // Refs
+    const typingTimeoutRef = useRef(null)
+    const inputRef = useRef(null)
 
-    const [msgInfo, setMsgInfo] = useState(null); // Lưu object tin nhắn đang xem
-
-
-
-    // Lắng nghe Online
+    // --- 1. LẮNG NGHE REALTIME (User Profile & Messages) ---
     useEffect(() => {
-        if (chatUser) {
-            setUserProfile(chatUser.userData);
+        if (chatUser?.userData?.id) {
+            setUserProfile(chatUser.userData); // Set data tĩnh trước để đỡ giật
             const unSub = onSnapshot(doc(db, "users", chatUser.userData.id), (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     setUserProfile(docSnapshot.data());
@@ -36,72 +39,221 @@ const ChatBox = () => {
         }
     }, [chatUser])
 
+    useEffect(() => {
+        if (messagesId) {
+            const unSub = onSnapshot(doc(db, 'messages', messagesId), (res) => {
+                if (res.exists()) {
+                    const data = res.data();
+                    setMessages(data.messages.reverse());
+                    // Check typing status
+                    const isOtherUserTyping = data.typing && data.typing[chatUser.userData.id];
+                    setIsTyping(!!isOtherUserTyping);
+                }
+            });
+            return () => unSub();
+        }
+    }, [messagesId, chatUser, setMessages])
 
-    // --- HÀM FORMAT NGÀY GIỜ CHI TIẾT ---
+
+    // --- 2. HÀM TIỆN ÍCH (HELPER FUNCTIONS) ---
+    const updateChatListLastMessage = useCallback(async (content) => {
+        const userIDs = [chatUser.rId, userData.id];
+        
+        // Dùng Promise.all để chạy song song việc update cho cả 2 user -> Tăng tốc độ
+        await Promise.all(userIDs.map(async (id) => {
+            const userChatsRef = doc(db, 'chats', id);
+            const userChatsSnapshot = await getDoc(userChatsRef);
+            
+            if (userChatsSnapshot.exists()) {
+                const userChatData = userChatsSnapshot.data();
+                const chatIndex = userChatData.chatsData.findIndex((c) => c.messageId === messagesId);
+                
+                if (chatIndex !== -1) {
+                    userChatData.chatsData[chatIndex].lastMessage = content;
+                    userChatData.chatsData[chatIndex].updatedAt = Date.now();
+                    
+                    if (userChatData.chatsData[chatIndex].rId === userData.id) {
+                        userChatData.chatsData[chatIndex].messageSeen = false;
+                    }
+                    await updateDoc(userChatsRef, { chatsData: userChatData.chatsData });
+                }
+            }
+        }));
+    }, [chatUser, userData.id, messagesId]);
+
     const formatFullTime = (timestamp) => {
         if (!timestamp) return "N/A";
-        let date;
-        if (timestamp.toDate) date = timestamp.toDate();
-        else date = new Date(timestamp);
-        
-        // Định dạng: 14:30 - Ngày 20/05/2024
+        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
         return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')} - Ngày ${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
     }
 
-
-    // --- XỬ LÝ EMOJI ---
-    const handleEmoji = (e) => {
-        // e.emoji chứa ký tự icon (vd: 😀)
-        setInput((prev) => prev + e.emoji); 
+    const convertTimestamp = (timestamp) => {
+        if (!timestamp) return "";
+        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+        if (isNaN(date.getTime())) return "";
+        const hour = date.getHours();
+        const minute = date.getMinutes().toString().padStart(2, "0");
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const formattedHour = hour % 12 || 12;
+        return `${formattedHour}:${minute} ${ampm}`;
     }
-    // -------------------
 
-    const deleteMessage = async (msgId) => {
+
+    // --- 3. XỬ LÝ CHỨC NĂNG CHÍNH ---
+    
+    // Gửi tin nhắn (Text)
+    const sendMessage = async () => {
+        if (editingMsg) {
+            saveEdit();
+            return;
+        }
+
         try {
-            if (!msgId) return;
-            if(!window.confirm("Bạn có chắc muốn thu hồi tin nhắn này?")) return;
+            if (input && messagesId) {
+                const textToSend = input; // Lưu biến local để clear input ngay lập tức
+                setInput(""); // Clear input ngay để tạo cảm giác mượt
+                if (inputRef.current) inputRef.current.style.height = "24px"; // Reset height
 
+                await updateDoc(doc(db, 'messages', messagesId), {
+                    messages: arrayUnion({ 
+                        sId: userData.id, 
+                        text: textToSend, 
+                        createdAt: new Date(), 
+                        msgId: Date.now(), 
+                        isEdited: false 
+                    }),
+                    [`typing.${userData.id}`]: false 
+                })
+
+                setOpenEmoji(false);
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+                // Cập nhật Left Sidebar
+                updateChatListLastMessage(textToSend.slice(0, 30));
+            }
+        } catch (error) { toast.error(error.message) }
+    }
+
+    // Gửi tin nhắn (Image)
+    const sendImage = async (e) => {
+        if(editingMsg || !e.target.files[0]) return; 
+
+        try {
+            const fileUrl = await upload(e.target.files[0]);
+            if (fileUrl && messagesId) {
+                await updateDoc(doc(db, 'messages', messagesId), {
+                    messages: arrayUnion({ sId: userData.id, image: fileUrl, createdAt: new Date(), msgId: Date.now() })
+                })
+                updateChatListLastMessage("Hình ảnh");
+            }
+        } catch (error) { toast.error(error.message) }
+    }
+
+    // Xử lý Input & Typing
+    const handleInputChange = (e) => {
+        const val = e.target.value;
+        setInput(val);
+
+        // Auto resize textarea
+        if (inputRef.current) {
+            inputRef.current.style.height = "auto";
+            inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+        }
+
+        if (!messagesId || editingMsg) return;
+
+        // Debounce typing status
+        if (!typingTimeoutRef.current) {
+             updateDoc(doc(db, 'messages', messagesId), { [`typing.${userData.id}`]: true }).catch(console.error);
+        }
+        
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        
+        typingTimeoutRef.current = setTimeout(() => {
+            updateDoc(doc(db, 'messages', messagesId), { [`typing.${userData.id}`]: false }).catch(console.error);
+            typingTimeoutRef.current = null;
+        }, 2000);
+    }
+
+    // Sửa tin nhắn
+    const handleEditClick = (msg) => {
+        setEditingMsg(msg);
+        setInput(msg.text);
+        setOpenEmoji(false);
+        if (inputRef.current) setTimeout(() => inputRef.current.focus(), 100); // Focus vào ô nhập
+    }
+
+    const saveEdit = async () => {
+        if (!input.trim()) {
+            toast.warning("Nội dung không được để trống!");
+            return;
+        }
+        try {
             const msgRef = doc(db, 'messages', messagesId);
             const snap = await getDoc(msgRef);
-            
+            if (snap.exists()) {
+                const data = snap.data();
+                const allMessages = data.messages;
+                
+                const updatedMessages = allMessages.map((msg) => 
+                    msg.msgId === editingMsg.msgId ? { ...msg, text: input, isEdited: true } : msg
+                );
+
+                await updateDoc(msgRef, { messages: updatedMessages });
+
+                // Check if last message was edited
+                if (allMessages.length > 0 && allMessages[allMessages.length - 1].msgId === editingMsg.msgId) {
+                    updateChatListLastMessage(input.slice(0, 30));
+                }
+            }
+            setEditingMsg(null);
+            setInput("");
+            if (inputRef.current) inputRef.current.style.height = "24px";
+            toast.success("Đã chỉnh sửa tin nhắn!");
+        } catch (error) { toast.error("Lỗi khi sửa: " + error.message); }
+    }
+
+    const cancelEdit = () => {
+        setEditingMsg(null);
+        setInput("");
+        if (inputRef.current) inputRef.current.style.height = "24px";
+    }
+
+    // Thu hồi tin nhắn
+    const deleteMessage = async (msgId) => {
+        if (!msgId) return;
+        if(!window.confirm("Bạn có chắc muốn thu hồi tin nhắn này?")) return;
+
+        try {
+            const msgRef = doc(db, 'messages', messagesId);
+            const snap = await getDoc(msgRef);
             if (snap.exists()) {
                 const data = snap.data();
                 const allMessages = data.messages;
                 const isLastMessage = allMessages.length > 0 && allMessages[allMessages.length - 1].msgId === msgId;
 
-                const updatedMessages = allMessages.map((msg) => {
-                    if (msg.msgId === msgId) {
-                        return { ...msg, isDeleted: true, text: "Tin nhắn đã bị thu hồi", image: "" }
-                    }
-                    return msg;
-                });
+                const updatedMessages = allMessages.map((msg) => 
+                    msg.msgId === msgId ? { ...msg, isDeleted: true, text: "Tin nhắn đã bị thu hồi", image: "" } : msg
+                );
 
                 await updateDoc(msgRef, { messages: updatedMessages });
 
                 if (isLastMessage) {
-                    const userIDs = [chatUser.rId, userData.id];
-                    userIDs.forEach(async (id) => {
-                        const userChatsRef = doc(db, 'chats', id);
-                        const userChatsSnapshot = await getDoc(userChatsRef);
-                        if (userChatsSnapshot.exists()) {
-                            const userChatData = userChatsSnapshot.data();
-                            const chatIndex = userChatData.chatsData.findIndex((c) => c.messageId === messagesId);
-                            if (chatIndex !== -1) {
-                                userChatData.chatsData[chatIndex].lastMessage = "Tin nhắn đã bị thu hồi";
-                                await updateDoc(userChatsRef, { chatsData: userChatData.chatsData });
-                            }
-                        }
-                    });
+                    updateChatListLastMessage("Tin nhắn đã bị thu hồi");
                 }
             }
         } catch (error) { toast.error("Lỗi: " + error.message); }
     }
 
+    // Chuyển đổi Chat
     const handleSwitchChat = async (item) => {
         setChatUser(item);
         setMessagesId(item.messageId);
         setIsTyping(false);
-        setOpenEmoji(false); // Đóng emoji khi chuyển chat
+        setOpenEmoji(false);
+        setEditingMsg(null);
+        setInput(""); // Clear input khi chuyển chat
+        
         if (!item.messageSeen) {
             try {
                 const userChatsRef = doc(db, 'chats', userData.id);
@@ -118,111 +270,21 @@ const ChatBox = () => {
         }
     }
 
-    const handleInputChange = async (e) => {
-        setInput(e.target.value);
-        if (!messagesId) return;
-        if (!typingTimeoutRef.current) {
-             try { await updateDoc(doc(db, 'messages', messagesId), { [`typing.${userData.id}`]: true }); } 
-             catch (error) { console.error(error) }
-        }
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(async () => {
-            try { await updateDoc(doc(db, 'messages', messagesId), { [`typing.${userData.id}`]: false }); } 
-            catch (error) { console.error(error) }
-            typingTimeoutRef.current = null;
-        }, 2000);
+
+    // --- 4. RENDER UI ---
+    if (!chatUser) {
+        return (
+            <div className={`chat-welcome ${chatVisible ? "" : "hidden"}`}>
+                <img src={assets.logo_big} alt='' />
+                <p>Chat anytime, anywhere</p>
+            </div>
+        )
     }
 
-    const sendMessage = async () => {
-        try {
-            if (input && messagesId) {
-                await updateDoc(doc(db, 'messages', messagesId), {
-                    messages: arrayUnion({ sId: userData.id, text: input, createdAt: new Date(), msgId: Date.now() }),
-                    [`typing.${userData.id}`]: false 
-                })
-                setOpenEmoji(false); // Gửi xong thì đóng bảng emoji
-                if (typingTimeoutRef.current) { clearTimeout(typingTimeoutRef.current); typingTimeoutRef.current = null; }
-
-                const userIDs = [chatUser.rId, userData.id];
-                userIDs.forEach(async (id) => {
-                    const userChatsRef = doc(db, 'chats', id);
-                    const userChatsSnapshot = await getDoc(userChatsRef);
-                    if (userChatsSnapshot.exists()) {
-                        const userChatData = userChatsSnapshot.data();
-                        const chatIndex = userChatData.chatsData.findIndex((c) => c.messageId === messagesId);
-                        if (chatIndex !== -1) {
-                            userChatData.chatsData[chatIndex].lastMessage = input.slice(0, 30);
-                            userChatData.chatsData[chatIndex].updatedAt = Date.now();
-                            if (userChatData.chatsData[chatIndex].rId === userData.id) {
-                                userChatData.chatsData[chatIndex].messageSeen = false;
-                            }
-                            await updateDoc(userChatsRef, { chatsData: userChatData.chatsData })
-                        }
-                    }
-                })
-            }
-        } catch (error) { toast.error(error.message) }
-        setInput("");
-    }
-
-    const sendImage = async (e) => {
-        try {
-            const fileUrl = await upload(e.target.files[0]);
-            if (fileUrl && messagesId) {
-                await updateDoc(doc(db, 'messages', messagesId), {
-                    messages: arrayUnion({ sId: userData.id, image: fileUrl, createdAt: new Date(), msgId: Date.now() })
-                })
-                const userIDs = [chatUser.rId, userData.id];
-                userIDs.forEach(async (id) => {
-                    const userChatsRef = doc(db, 'chats', id);
-                    const userChatsSnapshot = await getDoc(userChatsRef);
-                    if (userChatsSnapshot.exists()) {
-                        const userChatData = userChatsSnapshot.data();
-                        const chatIndex = userChatData.chatsData.findIndex((c) => c.messageId === messagesId);
-                        if (chatIndex !== -1) {
-                            userChatData.chatsData[chatIndex].lastMessage = "Hình ảnh";
-                            userChatData.chatsData[chatIndex].updatedAt = Date.now();
-                            if (userChatData.chatsData[chatIndex].rId === userData.id) {
-                                userChatData.chatsData[chatIndex].messageSeen = false;
-                            }
-                            await updateDoc(userChatsRef, { chatsData: userChatData.chatsData })
-                        }
-                    }
-                })
-            }
-        } catch (error) { toast.error(error.message) }
-    }
-
-    const convertTimestamp = (timestamp) => {
-        if (!timestamp) return "";
-        let date;
-        if (timestamp.toDate && typeof timestamp.toDate === 'function') { date = timestamp.toDate(); } 
-        else { date = new Date(timestamp); }
-        if (isNaN(date.getTime())) return "";
-        const hour = date.getHours();
-        const minute = date.getMinutes().toString().padStart(2, "0");
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const formattedHour = hour % 12 || 12;
-        return `${formattedHour}:${minute} ${ampm}`;
-    }
-
-    useEffect(() => {
-        if (messagesId) {
-            const unSub = onSnapshot(doc(db, 'messages', messagesId), (res) => {
-                if(res.exists()){
-                    const data = res.data();
-                    setMessages(data.messages.reverse())
-                    if (data.typing && data.typing[chatUser.userData.id]) setIsTyping(true);
-                    else setIsTyping(false);
-                }
-            })
-            return () => unSub()
-        }
-    }, [messagesId, chatUser])
-
-    return chatUser ? (
+    return (
         <div className={`chat-box ${chatVisible ? "" : "hidden"}`}>
             
+            {/* LEFT SIDEBAR (MOBILE) */}
             <div className="chat-mobile-sidebar">
                 {chatData && chatData.map((item, index) => (
                     <div key={index} onClick={() => handleSwitchChat(item)} className={`mobile-avatar-item ${item.userData.id === chatUser.userData.id ? "active-chat" : ""}`}>
@@ -232,45 +294,59 @@ const ChatBox = () => {
                 ))}
             </div>
 
+            {/* MAIN CONTENT */}
             <div className="chat-main-content">
+                
+                {/* HEADER */}
                 <div className="chat-user">
                     <img onClick={() => setChatVisible(false)} src={assets.arrow_icon} className='arrow' alt="Back" />
                     <img src={userProfile ? userProfile.avatar : assets.profile_img} alt="" />
                     <p>
                         {userProfile ? userProfile.name : "..."} 
-                        {userProfile && Date.now() - userProfile.lastSeen <= 60000 ? <img className='dot' src={assets.green_dot} alt="Online" /> : null} 
+                        {userProfile && Date.now() - userProfile.lastSeen <= 60000 && <img className='dot' src={assets.green_dot} alt="Online" />} 
                     </p>
                     <img onClick={() => setRightSidebarVisible(true)} src={assets.help_icon} alt="Help" />
                 </div>
 
+                {/* MESSAGES LIST */}
                 <div className="chat-msg">
-                    {isTyping && ( <div className="typing-indicator"><div className="typing-dot"></div><div className="typing-dot"></div><div className="typing-dot"></div></div> )}
+                    {isTyping && ( 
+                        <div className="typing-indicator">
+                            <div className="typing-dot"></div><div className="typing-dot"></div><div className="typing-dot"></div>
+                        </div> 
+                    )}
+
                     {messages && messages.map((msg, index) => (
                         <div key={index} className={msg.sId === userData.id ? "s-msg" : "r-msg"}>
                             <div className="msg-container">
-                                {msg.image && !msg.isDeleted ? <img className='msg-img' src={msg.image} alt="" /> : <p className={`msg ${msg.isDeleted ? "deleted" : ""}`}>{msg.text}</p>}
+                                {msg.image && !msg.isDeleted 
+                                    ? <img className='msg-img' src={msg.image} alt="" onClick={() => setZoomImage(msg.image)} /> 
+                                    : <div style={{display:'flex', flexDirection:'column'}}>
+                                        <p className={`msg ${msg.isDeleted ? "deleted" : ""}`}>
+                                            {msg.text}
+                                        </p>
+                                        {msg.isEdited && !msg.isDeleted && <span className="edited-label">(đã sửa)</span>}
+                                      </div>
+                                }
                                 
-
-                            <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
-                                    
-                                    {/* 1. Nút Xóa (Chỉ hiện cho tin mình gửi) */}
+                                {/* Message Actions */}
+                                <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
+                                    {/* Delete Button */}
                                     {msg.sId === userData.id && !msg.isDeleted && msg.msgId && (
                                         <img onClick={() => deleteMessage(msg.msgId)} src={assets.trash_icon || "https://cdn-icons-png.flaticon.com/512/3405/3405244.png"} className="delete-btn" alt="Xóa" title="Thu hồi" />
                                     )}
-
-                                    {/* 2. Nút Info (Hiện cho CẢ 2 BÊN để xem giờ) */}
+                                    {/* Edit Button */}
+                                    {msg.sId === userData.id && !msg.isDeleted && msg.msgId && !msg.image && (
+                                        <img onClick={() => handleEditClick(msg)} src={assets.edit_icon || "https://cdn-icons-png.flaticon.com/512/1159/1159633.png"} className="edit-btn" alt="Sửa" title="Chỉnh sửa" />
+                                    )}
+                                    {/* Info Button */}
                                     {!msg.isDeleted && (
-                                        <img 
-                                            onClick={() => setMsgInfo(msg)} 
-                                            src={assets.info_icon || "https://cdn-icons-png.flaticon.com/512/1101/1101366.png"} 
-                                            className="info-btn" 
-                                            alt="Chi tiết" 
-                                            title="Chi tiết tin nhắn"
-                                        />
+                                        <img onClick={() => setMsgInfo(msg)} src={assets.info_icon || "https://cdn-icons-png.flaticon.com/512/1101/1101366.png"} className="info-btn" alt="Chi tiết" title="Chi tiết tin nhắn" />
                                     )}
                                 </div>
-
                             </div>
+                            
+                            {/* Time & Avatar */}
                             <div>
                                 <img src={msg.sId === userData.id ? userData.avatar : chatUser.userData.avatar} alt="" />
                                 <p>{convertTimestamp(msg.createdAt)}</p>
@@ -279,29 +355,39 @@ const ChatBox = () => {
                     ))}
                 </div>
 
-                <div className="chat-input">
-                    <input onChange={handleInputChange} onClick={() => setOpenEmoji(false)} value={input} type="text" placeholder='Send a message' onKeyDown={(e) => e.key === "Enter" ? sendMessage() : null} />
+                {/* INPUT AREA */}
+                <div className={`chat-input ${editingMsg ? "editing" : ""}`}>
+                    {editingMsg && <span className="cancel-edit" onClick={cancelEdit}>Hủy sửa ✕</span>}
+
+                    <input 
+                        ref={inputRef}
+                        onChange={handleInputChange} 
+                        onClick={() => setOpenEmoji(false)} 
+                        value={input} 
+                        placeholder={editingMsg ? 'Đang chỉnh sửa...' : 'Nhập tin nhắn...'} 
+                        rows={1}
+                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                    />
                     
-                    {/* INPUT ẢNH */}
-                    <input onChange={sendImage} type="file" id='image' accept='image/png ,image/jpeg' hidden />
+                    {!editingMsg && (
+                        <>
+                            <input onChange={sendImage} type="file" id='image' accept='image/png ,image/jpeg' hidden />
+                            <label htmlFor="image"><img src={assets.gallery_icon} alt="" /></label>
+                        </>
+                    )}
                     
-                    {/* NÚT GALLERY */}
-                    <label htmlFor="image"><img src={assets.gallery_icon} alt="" /></label>
-                    
-                    {/* NÚT BẬT/TẮT EMOJI (Nếu không có icon, dùng link ảnh mạng) */}
                     <img onClick={() => setOpenEmoji(!openEmoji)} src={assets.emoji_icon || "https://cdn-icons-png.flaticon.com/512/1665/1665944.png"} alt="Emoji" className='emoji-btn'/>
+                    <img onClick={sendMessage} src={assets.send_button} alt={editingMsg ? "Lưu" : "Gửi"} style={editingMsg ? {filter: "hue-rotate(90deg)"} : {}} />
 
-                    {/* NÚT GỬI */}
-                    <img onClick={sendMessage} src={assets.send_button} alt="" />
-
-                    {/* BẢNG CHỌN EMOJI (Hiện khi openEmoji = true) */}
                     {openEmoji && (
                         <div className="emoji-picker-wrapper">
-                            <EmojiPicker onEmojiClick={handleEmoji} width={300} height={400} />
+                            <EmojiPicker onEmojiClick={(e) => setInput(prev => prev + e.emoji)} width={300} height={400} />
                         </div>
                     )}
+                </div>
+            </div>
 
-                    {/* --- MODAL POPUP CHI TIẾT TIN NHẮN --- */}
+            {/* INFO MODAL */}
             {msgInfo && (
                 <div className="msg-info-overlay" onClick={() => setMsgInfo(null)}>
                     <div className="msg-info-box" onClick={(e) => e.stopPropagation()}>
@@ -309,20 +395,19 @@ const ChatBox = () => {
                         <p><strong>Người gửi:</strong> {msgInfo.sId === userData.id ? "Bạn" : chatUser.userData.name}</p>
                         <p><strong>Thời gian gửi:</strong> {formatFullTime(msgInfo.createdAt)}</p>
                         <p><strong>Loại tin:</strong> {msgInfo.image ? "Hình ảnh" : "Văn bản"}</p>
-                        <p><strong>Trạng thái:</strong> {msgInfo.sId === userData.id ? "Đã gửi" : "Đã nhận"}</p>
+                        <p><strong>Trạng thái:</strong> {msgInfo.isDeleted ? "Đã thu hồi" : (msgInfo.isEdited ? "Đã chỉnh sửa" : "Đã gửi")}</p>
                         <button onClick={() => setMsgInfo(null)}>Đóng</button>
                     </div>
                 </div>
             )}
-
+            {zoomImage && (
+                <div className="image-zoom-overlay" onClick={() => setZoomImage(null)}>
+                    <span className="close-zoom-btn" onClick={() => setZoomImage(null)}>&times;</span>
+                    <img className="image-zoom-content" src={zoomImage} alt="Zoom" onClick={(e) => e.stopPropagation()} />
                 </div>
-            </div>
+            )}
         </div>
     )
-    : <div className={`chat-welcome ${chatVisible ? "" : "hidden"}`}>
-        <img src={assets.logo_big} alt='' />
-        <p>Chat anytime, anywhere</p>
-      </div>
 }
 
 export default ChatBox

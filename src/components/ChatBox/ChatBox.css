@@ -1,488 +1,339 @@
-/* ========================================= */
-/* --- CẤU TRÚC CHÍNH (CONTAINER) --- */
-/* ========================================= */
+
+
+/* ========================================================= */
+/* 1. CẤU TRÚC CHÍNH (LAYOUT)                                */
+/* ========================================================= */
 .chat-box {
     height: 75vh;
     background-color: #f1f5ff;
     position: relative;
-    /* Desktop mặc định display block */
+    display: flex; /* Dùng flex để dễ chia cột trên mobile */
+    flex-direction: column;
 }
 
-/* Khung chứa nội dung chat (Header + Msg + Input) */
+/* Khung chứa nội dung chat chính */
 .chat-main-content {
+    flex: 1; /* Chiếm toàn bộ không gian */
+    display: flex;
+    flex-direction: column;
+    background: white;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Màn hình Welcome */
+.chat-welcome {
+    width: 100%;
     height: 100%;
     display: flex;
-    flex-direction: column; /* Xếp dọc: Trên xuống dưới */
-    background: white;
-    overflow: hidden; /* Cắt bỏ phần thừa */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    color: #383838;
 }
+.chat-welcome img { width: 60px; }
+.chat-welcome p { font-size: 20px; font-weight: 500; }
 
-/* ========================================= */
-/* --- 1. HEADER (THANH TIÊU ĐỀ) --- */
-/* ========================================= */
+/* ========================================================= */
+/* 2. HEADER (THANH TIÊU ĐỀ)                                 */
+/* ========================================================= */
 .chat-user {
     padding: 10px 15px;
     display: flex;
     align-items: center;
-    gap: 10px; /* Khoảng cách giữa các phần tử */
+    gap: 10px;
     border-bottom: 1px solid #d1d1d1;
     background: white;
-    flex-shrink: 0; /* Cố định chiều cao */
+    flex-shrink: 0;
     min-height: 60px;
 }
 
-/* Nút quay lại (Mũi tên) - Mặc định ẩn trên Desktop */
-.chat-user .arrow {
-    display: none;
-    width: 25px;
-    height: 25px;
-    cursor: pointer;
-    margin-right: 5px; /* Cách avatar ra một chút */
-}
-
-/* Avatar người dùng */
+/* Avatar Header */
 .chat-user img:not(.arrow):not([alt="Help"]) {
     width: 38px;
-    
-    border-radius: 50%;
-    object-fit: cover;
-    aspect-ratio: 1/1;
+    border-radius: 50%; object-fit: cover; aspect-ratio: 1/1;
 }
 
-/* Tên người dùng - QUAN TRỌNG: Xử lý tên dài */
+/* Tên User */
 .chat-user p {
-    flex: 1; /* Chiếm hết khoảng trống giữa để đẩy nút Help sang phải */
-    margin: 0;
-    font-weight: 500;
-    font-size: 18px;
-    color: #393939;
-    
-    /* Chống vỡ giao diện khi tên quá dài */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0; /* Fix lỗi Flexbox không co lại được */
+    flex: 1; margin: 0;
+    font-weight: 500; font-size: 18px; color: #393939;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* Nút Help (Bên phải) */
-.chat-user img[alt="Help"] {
-    width: 25px;
-    cursor: pointer;
-}
+/* Icons Header */
+.chat-user .arrow { display: none; width: 25px; cursor: pointer; margin-right: 5px; }
+.chat-user img[alt="Help"] { width: 25px; cursor: pointer; }
 
-/* ========================================= */
-/* --- 2. KHUNG TIN NHẮN (MESSAGE AREA) --- */
-/* ========================================= */
+
+/* ========================================================= */
+/* 3. KHUNG TIN NHẮN (MESSAGE LIST)                          */
+/* ========================================================= */
 .chat-msg {
-    flex: 1; /* Tự động giãn ra chiếm hết khoảng trống */
-    overflow-y: auto; /* Cho phép cuộn */
-    padding: 0 15px;
-    padding-bottom: 20px;
-    
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 15px 20px 15px;
     display: flex;
     flex-direction: column-reverse; /* Tin mới nhất ở dưới */
 }
 
-/* Thanh cuộn tùy chỉnh */
-.chat-msg::-webkit-scrollbar {
-    width: 6px;
-}
-.chat-msg::-webkit-scrollbar-thumb {
-    background: #c6c6c6;
-    border-radius: 10px;
-}
+/* Custom Scrollbar */
+.chat-msg::-webkit-scrollbar { width: 6px; }
+.chat-msg::-webkit-scrollbar-thumb { background: #c6c6c6; border-radius: 10px; }
 
-/* Dòng tin nhắn */
+/* Hàng chứa tin nhắn */
+ 
 .s-msg, .r-msg {
     display: flex;
     align-items: flex-end; /* Căn avatar xuống đáy dòng */
     justify-content: flex-end;
     gap: 10px;
-    padding: 0px 15px;
-    margin-bottom: 20px; /* Khoảng cách giữa các tin nhắn */
+    padding: 0px 10px;
+    margin-bottom: 5px; /* Khoảng cách giữa các tin nhắn */
 }
  .r-msg{
     flex-direction: row-reverse;
     justify-content: start;
  }
-/* Bong bóng chat */
-.msg {
-    color: white;
-    background-color: #077EFF;
-    padding: 10px 15px;
-    border-radius: 8px 8px 0px 8px;
-    font-size: 14px;
-    font-weight: 300;
-    line-height: 1.5;
-
-    /* --- CÁC DÒNG QUAN TRỌNG ĐỂ XUỐNG DÒNG --- */
-    max-width: 75%;            /* Chỉ cho phép tin nhắn rộng tối đa 75% khung */
-    width: fit-content;        /* Chiều rộng vừa khít nội dung */
-    
-    white-space: pre-wrap;     /* Giữ nguyên dấu xuống dòng (Enter) của người dùng */
-    word-break: break-word;    /* Nếu từ quá dài (vd: aaaaa...) thì tự cắt xuống dòng */
-    overflow-wrap: break-word; /* Hỗ trợ các trình duyệt hiện đại */
-}
-
-.r-msg .msg {
-    background-color: #f1f1f1;
-    color: #333;
-    border-radius: 8px 8px 8px 0px;
-}
-
-/* Ảnh gửi trong tin nhắn */
-.msg-img {
-    max-width: 200px;
-    border-radius: 10px;
-    margin-bottom: 5px;
-    border: 1px solid #eee;
-}
-
-/* Avatar nhỏ & Giờ gửi */
-.s-msg div img, .r-msg div img {
-    width: 27px;
-    height: 27px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-.s-msg div, .r-msg div {
-    text-align: center;
-    font-size: 10px;
-    color: #999;
-    margin-top: 2px;
-}
-
-/* ========================================= */
-/* --- 3. KHUNG NHẬP LIỆU (INPUT) --- */
-/* ========================================= */
-.chat-input {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 15px;
-    background: white;
-    border-top: 1px solid #eee;
-    flex-shrink: 0; /* Cố định chiều cao */
-}
-
-.chat-input input {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-size: 15px;
-    padding: 5px;
-}
-
-.chat-input img {
-    width: 24px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-.chat-input img:hover { transform: scale(1.1); }
-
-.chat-input label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-}
-
-
-.chat-welcome{
-   width: 100%;
-   display: flex;
-   flex-direction: column;
-   align-items: center;
-   justify-content: center;
-   gap: 5px;
- }
- .chat-welcome img{
-   width: 60px;
- }
- .chat-welcome p{
-    font-size: 20px;
-    font-weight: 500;
-    color: #383838;
- }
-
-/* ========================================= */
-/* --- 4. CỘT AVATAR TRÊN MOBILE (RAIL) --- */
-/* ========================================= */
-.chat-mobile-sidebar {
-    display: none; /* Mặc định ẩn trên Desktop */
-}
-
-/* ========================================= */
-/* --- 5. RESPONSIVE MOBILE (QUAN TRỌNG) --- */
-/* ========================================= */
-@media (max-width: 900px) {
-    
-    .chat-box {
-        display: flex !important; /* Mặc định hiện khi chat */
-        flex-direction: row;
-        height: 100vh;
-        width: 100%;
-    }
-
-    /* --- FIX LỖI: ẨN HOÀN TOÀN KHI QUAY LẠI --- */
-    .chat-box.hidden {
-        display: none !important; 
-    }
-    
-    /* Ẩn luôn màn hình Welcome nếu đang ở danh sách */
-    .chat-welcome.hidden {
-        display: none !important;
-    }
-    /* ------------------------------------------ */
-
-    /* Avatar Rail bên trái */
-    .chat-mobile-sidebar {
-        display: flex; flex-direction: column; width: 70px;
-        background-color: #001233; padding-top: 15px; overflow-y: auto;
-        border-right: 1px solid rgba(255,255,255,0.1); align-items: center; gap: 15px; flex-shrink: 0;
-    }
-    .mobile-avatar-item img { width: 45px; height: 45px; border-radius: 50%; opacity: 0.6; border: 2px solid transparent; object-fit: cover; }
-    .mobile-avatar-item.active-chat img { opacity: 1; border-color: #077EFF; }
-    
-    .chat-user .arrow { display: block; } /* Hiện nút back */
-    .chat-welcome { display: none; } /* Mặc định ẩn welcome trên mobile để tránh vướng */
-}
-@media (max-width: 900px) {
-    .chat-container {
-        width: 100% !important; /* Bung full chiều ngang */
-        height: 100vh !important; /* Bung full chiều dọc */
-        max-width: 100% !important;
-        border-radius: 0 !important; /* Bỏ bo góc để vuông vức */
-        
-        /* Thay đổi Flexbox để phù hợp mobile */
-        display: flex !important;
-        flex-direction: column !important;
-    }
-    .chat-box {
-        display: flex !important;
-        flex-direction: row; /* Chia cột ngang: Rail | Chat Main */
-        height: 100vh; /* Full màn hình mobile */
-    }
-    .chat-main-content {
-        flex: 1; /* Chiếm hết chiều ngang còn lại sau khi trừ sidebar */
-        width: auto; /* Để flex tự tính toán */
-    }
-
-    /* --- Hiện thanh Avatar (Rail) --- */
-    .chat-mobile-sidebar {
-        display: flex;
-        flex-direction: column;
-        width: 70px;
-        background-color: #001233;
-        padding-top: 15px;
-        overflow-y: auto;
-        border-right: 1px solid rgba(255,255,255,0.1);
-        align-items: center;
-        gap: 15px;
-        flex-shrink: 0;
-    }
-
-    /* Style Avatar trong Rail */
-    .mobile-avatar-item {
-        position: relative;
-        padding: 3px;
-        cursor: pointer;
-    }
-    
-    .mobile-avatar-item img {
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid transparent;
-        opacity: 0.6;
-    }
-
-    .mobile-avatar-item.active-chat img {
-        opacity: 1;
-        border-color: #077EFF;
-    }
-
-    .notify-dot {
-        position: absolute; top: 0; right: 0;
-        width: 10px; height: 10px;
-        background: #ff4b4b;
-        border-radius: 50%;
-        border: 2px solid #001233;
-    }
-
-    /* --- Hiện nút Back trên Mobile --- */
-    .chat-user .arrow {
-        display: block; 
-    }
-}
-
-/* --- HIỆU ỨNG TYPING (ĐANG SOẠN TIN) --- */
-.typing-indicator {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    padding: 10px 15px;
-    margin-bottom: 20px;
-    margin-left: 15px; /* Căn trái */
-    background-color: #f1f1f1;
-    border-radius: 8px 8px 8px 0px;
-    width: fit-content;
-    height: 35px;
-}
-
-.typing-dot {
-    width: 6px;
-    height: 6px;
-    background-color: #90949c;
-    border-radius: 50%;
-    animation: typing 1.4s infinite ease-in-out both;
-}
-
-.typing-dot:nth-child(1) { animation-delay: -0.32s; }
-.typing-dot:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes typing {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1); }
-}
-
-
-/* ... Code cũ giữ nguyên ... */
-
-/* Style cho tin nhắn đã thu hồi */
-.msg.deleted {
-    font-style: italic;
-    color: #555; /* Màu xám */
-    background-color: #e0e0e0; /* Nền xám nhạt */
-    border: 1px solid #ccc;
-}
-.r-msg .msg.deleted {
-    background-color: #f1f1f1;
-}
-
-/* Container của tin nhắn để chứa nút xóa */
+/* Container bao quanh bong bóng chat + icon chức năng */
 .msg-container {
     display: flex;
     align-items: center;
     gap: 8px;
     position: relative;
 }
+.s-msg .msg-container { flex-direction: row-reverse; }
 
-/* Đảo ngược thứ tự cho tin nhắn của mình (để nút xóa nằm bên trái tin nhắn) */
-.s-msg .msg-container {
-    flex-direction: row-reverse;
+/* Bong bóng tin nhắn */
+.msg {
+    color: white; background-color: #077EFF;
+    padding: 10px 15px;
+    border-radius: 8px 8px 0px 8px;
+    font-size: 14px; font-weight: 300; line-height: 1.5;
+     width: fit-content;
+    white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
+}
+.r-msg .msg {
+    background-color: #f1f1f1; color: #333;
+    border-radius: 8px 8px 8px 0px;
 }
 
-/* Nút xóa tin nhắn (Thùng rác) */
-.delete-btn {
-    width: 20px !important; /* Ghi đè size ảnh avatar */
-    height: 20px !important;
-    cursor: pointer;
-    opacity: 0; /* Mặc định ẩn */
-    transition: opacity 0.2s;
-    filter: invert(36%) sepia(90%) saturate(2335%) hue-rotate(338deg) brightness(86%) contrast(92%); /* Màu đỏ (tùy chọn) */
+/* Tin nhắn đặc biệt: Ảnh, Đã xóa */
+.msg-img {
+    max-width: 250px !important; /* Tăng kích thước tối đa lên cho đẹp */
+    width: auto !important;      /* Tự động theo tỉ lệ ảnh */
+    height: auto !important;     /* Tự động theo tỉ lệ ảnh */
+    border-radius: 10px !important;
+    border: 1px solid #eee;
+    margin-bottom: 5px;
+    object-fit: contain !important; /* Hiển thị full ảnh không bị cắt */
 }
+.msg.deleted { font-style: italic; color: #555; background-color: #e0e0e0; border: 1px solid #ccc; }
+.r-msg .msg.deleted { background-color: #f1f1f1; }
+.edited-label { font-size: 10px; color: #ccc; font-style: italic; margin-left: 5px; align-self: flex-end; }
 
-/* Chỉ hiện nút xóa khi di chuột vào tin nhắn của mình */
-.s-msg:hover .delete-btn {
-    opacity: 1;
+/* Avatar nhỏ & Thời gian */
+.s-msg div img, .r-msg div img { width: 27px; height: 27px; border-radius: 50%; object-fit: cover; }
+.s-msg div, .r-msg div { text-align: center; font-size: 10px; color: #999; margin-top: 2px; }
+
+/* --- ICON CHỨC NĂNG (XÓA, SỬA, INFO) --- */
+/* Gộp style chung cho các nút */
+.delete-btn, .edit-btn, .info-btn {
+    width: 18px !important; height: 18px !important;
+    cursor: pointer; opacity: 0; transition: opacity 0.2s;
 }
+.delete-btn { filter: invert(36%) sepia(90%) saturate(2335%) hue-rotate(338deg) brightness(86%) contrast(92%); } /* Đỏ */
+.edit-btn, .info-btn { filter: invert(50%); } /* Xám */
 
-/* --- CSS CHO EMOJI PICKER --- */
+/* Hiển thị khi hover */
+.s-msg:hover .delete-btn, 
+.s-msg:hover .edit-btn, 
+.s-msg:hover .info-btn,
+.r-msg:hover .info-btn { opacity: 1; }
+
+
+/* ========================================================= */
+/* 4. TYPING INDICATOR (ĐANG SOẠN TIN)                       */
+/* ========================================================= */
+.typing-indicator {
+    display: flex; align-items: center; gap: 3px;
+    padding: 10px 15px; margin-bottom: 20px; margin-left: 15px;
+    background-color: #f1f1f1;
+    border-radius: 8px 8px 8px 0px;
+    width: fit-content; height: 35px;
+}
+.typing-dot {
+    width: 6px; height: 6px;
+    background-color: #90949c; border-radius: 50%;
+    animation: typing 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+
+/* ========================================================= */
+/* 5. KHUNG NHẬP LIỆU (INPUT)                                */
+/* ========================================================= */
 .chat-input {
-    position: relative; /* Để làm mốc tọa độ cho bảng emoji */
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 15px;
+    background: white; border-top: 1px solid #eee;
+    flex-shrink: 0; position: relative;
 }
+.chat-input.editing { background-color: #fff9c4; border-top: 2px solid #fbc02d; }
 
-/* Nút Emoji */
-.emoji-btn {
-    width: 26px !important;
-    height: 26px !important;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-.emoji-btn:hover {
-    transform: scale(1.1);
-}
+.chat-input input { flex: 1; border: none; outline: none; font-size: 15px; padding: 5px; background: transparent;}
+.chat-input img { width: 24px; cursor: pointer; transition: 0.2s; }
+.chat-input img:hover { transform: scale(1.1); }
+.chat-input label { display: flex; align-items: center; cursor: pointer; }
 
-/* Khung chứa bảng Emoji */
+/* Nút hủy sửa */
+.cancel-edit { font-size: 12px; color: red; font-weight: bold; cursor: pointer; margin-right: 10px; white-space: nowrap; }
+.cancel-edit:hover { text-decoration: underline; }
+
+/* Emoji Picker */
+.emoji-btn { width: 26px !important; height: 26px !important; }
 .emoji-picker-wrapper {
-    position: absolute;
-    bottom: 70px; /* Cách đáy 70px (nằm trên input) */
-    right: 20px;  /* Căn phải */
-    z-index: 1000;
-    box-shadow: 0px 5px 15px rgba(0,0,0,0.2);
-    border-radius: 10px;
+    position: absolute; bottom: 70px; right: 20px;
+    z-index: 1000; box-shadow: 0px 5px 15px rgba(0,0,0,0.2); border-radius: 10px;
 }
 
-/* Ẩn bảng trên mobile nếu quá to */
-@media (max-width: 600px) {
-    .emoji-picker-wrapper {
-        right: 0;
-        bottom: 60px;
-    }
-}
-
-/* ... Code cũ ... */
-
-/* --- NÚT INFO VÀ MODAL CHI TIẾT --- */
-.info-btn {
-    width: 18px !important;
-    height: 18px !important;
-    cursor: pointer;
-    opacity: 0; /* Mặc định ẩn */
-    transition: opacity 0.2s;
-    filter: invert(50%); /* Màu xám */
-}
-
-/* Hiện nút info khi di chuột vào tin nhắn (cả mình và bạn) */
-.s-msg:hover .info-btn, .r-msg:hover .info-btn {
-    opacity: 1;
-}
-
-/* Lớp phủ mờ đen (Overlay) */
+/* ========================================================= */
+/* 6. MODAL & OVERLAY                                        */
+/* ========================================================= */
 .msg-info-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000;
+}
+.msg-info-box {
+    background: white; padding: 20px; border-radius: 10px; width: 300px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3); text-align: center;
+}
+.msg-info-box h3 { margin-bottom: 15px; color: #077EFF; }
+.msg-info-box p { margin: 10px 0; font-size: 14px; color: #333; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+.msg-info-box button { margin-top: 15px; padding: 8px 20px; background: #077EFF; color: white; border: none; border-radius: 5px; cursor: pointer; }
+
+
+/* ========================================================= */
+/* 7. CỘT AVATAR TRÊN MOBILE (RAIL)                          */
+/* ========================================================= */
+.chat-mobile-sidebar { display: none; } /* Ẩn trên Desktop */
+
+
+/* ========================================================= */
+/* 8. RESPONSIVE MOBILE (TẤT CẢ LOGIC MOBILE Ở ĐÂY)         */
+/* ========================================================= */
+@media (max-width: 900px) {
+    
+    /* --- CẤU TRÚC CHUNG TRÊN MOBILE --- */
+    .chat-box {
+        display: flex !important;
+        flex-direction: row; /* Chia ngang: Rail | Chat Main */
+        height: 100vh;
+        width: 100%;
+    }
+
+    /* Container bao ngoài (để đè lên file Chat.css nếu cần) */
+    .chat-container {
+        width: 100% !important; height: 100vh !important;
+        max-width: 100% !important; border-radius: 0 !important;
+        display: flex !important; flex-direction: column !important;
+    }
+
+    /* --- LOGIC ẨN/HIỆN NAV --- */
+    /* Khi có class hidden (tức là đang ở danh sách chat), ẩn ChatBox đi */
+    .chat-box.hidden { display: none !important; }
+    .chat-welcome.hidden { display: none !important; }
+    .chat-welcome { display: none; } /* Mobile không cần welcome */
+
+    /* --- SIDEBAR TRÁI (RAIL) --- */
+    .chat-mobile-sidebar {
+        display: flex; flex-direction: column; width: 70px;
+        background-color: #001233; padding-top: 15px; overflow-y: auto;
+        border-right: 1px solid rgba(255,255,255,0.1);
+        align-items: center; gap: 15px; flex-shrink: 0;
+    }
+    
+    .mobile-avatar-item { position: relative; padding: 3px; cursor: pointer; }
+    .mobile-avatar-item img {
+        width: 45px; height: 45px; border-radius: 50%;
+        border: 2px solid transparent; opacity: 0.6; object-fit: cover;
+    }
+    .mobile-avatar-item.active-chat img { opacity: 1; border-color: #077EFF; }
+    
+    .notify-dot {
+        position: absolute; top: 0; right: 0; width: 10px; height: 10px;
+        background: #ff4b4b; border-radius: 50%; border: 2px solid #001233;
+    }
+
+    /* --- CÁC PHẦN KHÁC --- */
+    .chat-user .arrow { display: block; } /* Hiện nút Back */
+    .emoji-picker-wrapper { right: 0; bottom: 60px; } /* Chỉnh emoji cho vừa màn hình */
+}
+
+/* ... Code cũ giữ nguyên ... */
+
+/* ========================================================= */
+/* 9. CHẾ ĐỘ XEM ẢNH FULL MÀN HÌNH (LIGHTBOX)                */
+/* ========================================================= */
+
+/* Lớp phủ nền đen mờ */
+.image-zoom-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.9); /* Màu đen độ mờ 90% */
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000; /* Nằm trên cùng */
+    z-index: 3000; /* Cao hơn tất cả các thành phần khác */
+    opacity: 0;
+    animation: fadeIn 0.3s forwards; /* Hiệu ứng hiện dần */
 }
 
-/* Hộp nội dung chi tiết */
-.msg-info-box {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    width: 300px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    text-align: center;
-}
-
-.msg-info-box h3 {
-    margin-bottom: 15px;
-    color: #077EFF;
-}
-
-.msg-info-box p {
-    margin: 10px 0;
-    font-size: 14px;
-    color: #333;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 5px;
-}
-
-.msg-info-box button {
-    margin-top: 15px;
-    padding: 8px 20px;
-    background: #077EFF;
-    color: white;
-    border: none;
+/* Ảnh hiển thị to */
+.image-zoom-content {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain; /* Giữ tỉ lệ ảnh không bị méo */
     border-radius: 5px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    transform: scale(0.8);
+    animation: zoomIn 0.3s forwards; /* Hiệu ứng phóng to */
+}
+
+/* Nút đóng (X) */
+.close-zoom-btn {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: white;
+    font-size: 40px;
+    font-weight: bold;
     cursor: pointer;
+    user-select: none;
+    transition: 0.2s;
+}
+.close-zoom-btn:hover {
+    color: #ccc;
+    transform: scale(1.1);
+}
+
+/* Hiệu ứng Animation */
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+@keyframes zoomIn {
+    to { transform: scale(1); }
+}
+
+/* Con trỏ chuột khi di vào ảnh nhỏ trong chat */
+.msg-img {
+    cursor: zoom-in; /* Biến thành hình kính lúp */
 }
