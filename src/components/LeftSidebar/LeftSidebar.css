@@ -98,3 +98,73 @@
     .ls-list { padding-bottom: 20px; }
     .friends { padding: 15px; }
 }
+
+/* ... Giữ nguyên các phần cũ ... */
+
+/* --- MENU 3 CHẤM --- */
+.friends {
+    position: relative;
+}
+
+.menu-chat-btn {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: none; /* Mặc định ẩn */
+    align-items: center; justify-content: center;
+    cursor: pointer; z-index: 10;
+}
+
+.menu-chat-btn img {
+    width: 16px; opacity: 0.6;
+}
+
+.menu-chat-btn:hover {
+    background-color: #f0f0f0;
+}
+
+/* Hiện nút khi hover hoặc khi menu đang mở */
+.friends:hover .menu-chat-btn,
+.friends.menu-active .menu-chat-btn {
+    display: flex;
+}
+
+.friends:hover span,
+.friends.menu-active span {
+    display: none; /* Ẩn tin nhắn cuối để hiện menu */
+}
+
+/* --- DROPDOWN MENU (Bảng chọn) --- */
+.chat-menu-dropdown {
+    position: absolute;
+    right: 20px; top: 35px;
+    background: white; border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    padding: 5px 0; z-index: 100;
+    min-width: 140px; overflow: hidden;
+    animation: fadeIn 0.1s ease-in;
+}
+
+.menu-item {
+    padding: 10px 15px; font-size: 13px; color: #333;
+    cursor: pointer; display: flex; align-items: center; gap: 10px;
+    transition: background 0.2s;
+}
+
+.menu-item:hover { background-color: #f5f5f5; color: #077EFF; }
+.menu-item.delete { color: #ff4b4b; }
+.menu-item.delete:hover { background-color: #fff0f0; }
+
+/* Icon ghim */
+.pinned-icon {
+    position: absolute; right: 15px; top: 15px;
+    width: 14px; opacity: 0.7; transform: rotate(45deg);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}

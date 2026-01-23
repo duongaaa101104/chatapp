@@ -10,9 +10,9 @@ import EmojiPicker from 'emoji-picker-react'
 
 const ChatBox = () => {
 
-    const { userData, chatUser, messages, messagesId, chatVisible, setChatVisible, setRightSidebarVisible, chatData, setChatUser, setMessagesId, setMessages } = useContext(AppContext)
+    const { userData, chatUser, messages, messagesId, chatVisible, setChatVisible, setRightSidebarVisible, chatData, setChatUser, setMessagesId, setMessages, setAppFullImage } = useContext(AppContext)
     
-    // States
+    // --- STATES ---
     const [input, setInput] = useState("")
     const [userProfile, setUserProfile] = useState(null)
     const [isTyping, setIsTyping] = useState(false)
@@ -20,16 +20,14 @@ const ChatBox = () => {
     const [msgInfo, setMsgInfo] = useState(null)
     const [editingMsg, setEditingMsg] = useState(null)
 
-    const [zoomImage, setZoomImage] = useState(null);
-
-    // Refs
+    // --- REFS ---
     const typingTimeoutRef = useRef(null)
     const inputRef = useRef(null)
 
-    // --- 1. LẮNG NGHE REALTIME (User Profile & Messages) ---
+    // --- 1. LẮNG NGHE REALTIME ---
     useEffect(() => {
         if (chatUser?.userData?.id) {
-            setUserProfile(chatUser.userData); // Set data tĩnh trước để đỡ giật
+            setUserProfile(chatUser.userData);
             const unSub = onSnapshot(doc(db, "users", chatUser.userData.id), (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     setUserProfile(docSnapshot.data());
@@ -55,11 +53,12 @@ const ChatBox = () => {
     }, [messagesId, chatUser, setMessages])
 
 
-    // --- 2. HÀM TIỆN ÍCH (HELPER FUNCTIONS) ---
+    // --- 2. HÀM HỖ TRỢ (UTILS) ---
+    
+    // Cập nhật tin nhắn cuối cùng ra màn hình danh sách chat (Dùng Promise.all để tối ưu tốc độ)
     const updateChatListLastMessage = useCallback(async (content) => {
         const userIDs = [chatUser.rId, userData.id];
         
-        // Dùng Promise.all để chạy song song việc update cho cả 2 user -> Tăng tốc độ
         await Promise.all(userIDs.map(async (id) => {
             const userChatsRef = doc(db, 'chats', id);
             const userChatsSnapshot = await getDoc(userChatsRef);
@@ -69,7 +68,7 @@ const ChatBox = () => {
                 const chatIndex = userChatData.chatsData.findIndex((c) => c.messageId === messagesId);
                 
                 if (chatIndex !== -1) {
-                    userChatData.chatsData[chatIndex].lastMessage = content;
+                    userChatData.chatsData[chatIndex].lastMessage = content; // Hiển thị full không cắt chữ
                     userChatData.chatsData[chatIndex].updatedAt = Date.now();
                     
                     if (userChatData.chatsData[chatIndex].rId === userData.id) {
@@ -98,63 +97,14 @@ const ChatBox = () => {
         return `${formattedHour}:${minute} ${ampm}`;
     }
 
+    // --- 3. XỬ LÝ SỰ KIỆN (HANDLERS) ---
 
-    // --- 3. XỬ LÝ CHỨC NĂNG CHÍNH ---
-    
-    // Gửi tin nhắn (Text)
-    const sendMessage = async () => {
-        if (editingMsg) {
-            saveEdit();
-            return;
-        }
-
-        try {
-            if (input && messagesId) {
-                const textToSend = input; // Lưu biến local để clear input ngay lập tức
-                setInput(""); // Clear input ngay để tạo cảm giác mượt
-                if (inputRef.current) inputRef.current.style.height = "24px"; // Reset height
-
-                await updateDoc(doc(db, 'messages', messagesId), {
-                    messages: arrayUnion({ 
-                        sId: userData.id, 
-                        text: textToSend, 
-                        createdAt: new Date(), 
-                        msgId: Date.now(), 
-                        isEdited: false 
-                    }),
-                    [`typing.${userData.id}`]: false 
-                })
-
-                setOpenEmoji(false);
-                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-
-                // Cập nhật Left Sidebar
-                updateChatListLastMessage(textToSend.slice(0, 30));
-            }
-        } catch (error) { toast.error(error.message) }
-    }
-
-    // Gửi tin nhắn (Image)
-    const sendImage = async (e) => {
-        if(editingMsg || !e.target.files[0]) return; 
-
-        try {
-            const fileUrl = await upload(e.target.files[0]);
-            if (fileUrl && messagesId) {
-                await updateDoc(doc(db, 'messages', messagesId), {
-                    messages: arrayUnion({ sId: userData.id, image: fileUrl, createdAt: new Date(), msgId: Date.now() })
-                })
-                updateChatListLastMessage("Hình ảnh");
-            }
-        } catch (error) { toast.error(error.message) }
-    }
-
-    // Xử lý Input & Typing
+    // Xử lý nhập liệu + Auto Resize Textarea + Typing Status
     const handleInputChange = (e) => {
         const val = e.target.value;
         setInput(val);
 
-        // Auto resize textarea
+        // Auto resize height
         if (inputRef.current) {
             inputRef.current.style.height = "auto";
             inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
@@ -175,19 +125,65 @@ const ChatBox = () => {
         }, 2000);
     }
 
+    // Gửi tin nhắn
+    const sendMessage = async () => {
+        if (editingMsg) { saveEdit(); return; }
+
+        try {
+            if (input && messagesId) {
+                const textToSend = input; 
+                setInput(""); // Clear input ngay lập tức cho mượt
+                if (inputRef.current) inputRef.current.style.height = "24px"; // Reset height
+
+                await updateDoc(doc(db, 'messages', messagesId), {
+                    messages: arrayUnion({ 
+                        sId: userData.id, 
+                        text: textToSend, 
+                        createdAt: new Date(), 
+                        msgId: Date.now(), 
+                        isEdited: false 
+                    }),
+                    [`typing.${userData.id}`]: false 
+                })
+
+                setOpenEmoji(false);
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                updateChatListLastMessage(textToSend);
+            }
+        } catch (error) { toast.error(error.message) }
+    }
+
+    // Gửi ảnh
+    const sendImage = async (e) => {
+        if(editingMsg || !e.target.files[0]) return; 
+        try {
+            const fileUrl = await upload(e.target.files[0]);
+            if (fileUrl && messagesId) {
+                await updateDoc(doc(db, 'messages', messagesId), {
+                    messages: arrayUnion({ sId: userData.id, image: fileUrl, createdAt: new Date(), msgId: Date.now() })
+                })
+                updateChatListLastMessage("Hình ảnh");
+            }
+        } catch (error) { toast.error(error.message) }
+    }
+
     // Sửa tin nhắn
-    const handleEditClick = (msg) => {
+    const handleEditClick = useCallback((msg) => {
         setEditingMsg(msg);
         setInput(msg.text);
         setOpenEmoji(false);
-        if (inputRef.current) setTimeout(() => inputRef.current.focus(), 100); // Focus vào ô nhập
-    }
+        if (inputRef.current) {
+            setTimeout(() => {
+                inputRef.current.focus();
+                // Trigger auto resize khi click edit
+                inputRef.current.style.height = "auto";
+                inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+            }, 100); 
+        }
+    }, []);
 
     const saveEdit = async () => {
-        if (!input.trim()) {
-            toast.warning("Nội dung không được để trống!");
-            return;
-        }
+        if (!input.trim()) { toast.warning("Nội dung không được để trống!"); return; }
         try {
             const msgRef = doc(db, 'messages', messagesId);
             const snap = await getDoc(msgRef);
@@ -201,9 +197,9 @@ const ChatBox = () => {
 
                 await updateDoc(msgRef, { messages: updatedMessages });
 
-                // Check if last message was edited
+                // Nếu sửa tin nhắn cuối cùng thì cập nhật lại sidebar
                 if (allMessages.length > 0 && allMessages[allMessages.length - 1].msgId === editingMsg.msgId) {
-                    updateChatListLastMessage(input.slice(0, 30));
+                    updateChatListLastMessage(input);
                 }
             }
             setEditingMsg(null);
@@ -213,17 +209,16 @@ const ChatBox = () => {
         } catch (error) { toast.error("Lỗi khi sửa: " + error.message); }
     }
 
-    const cancelEdit = () => {
+    const cancelEdit = useCallback(() => {
         setEditingMsg(null);
         setInput("");
         if (inputRef.current) inputRef.current.style.height = "24px";
-    }
+    }, []);
 
-    // Thu hồi tin nhắn
+    // Xóa tin nhắn
     const deleteMessage = async (msgId) => {
         if (!msgId) return;
         if(!window.confirm("Bạn có chắc muốn thu hồi tin nhắn này?")) return;
-
         try {
             const msgRef = doc(db, 'messages', messagesId);
             const snap = await getDoc(msgRef);
@@ -231,29 +226,26 @@ const ChatBox = () => {
                 const data = snap.data();
                 const allMessages = data.messages;
                 const isLastMessage = allMessages.length > 0 && allMessages[allMessages.length - 1].msgId === msgId;
-
+                
                 const updatedMessages = allMessages.map((msg) => 
                     msg.msgId === msgId ? { ...msg, isDeleted: true, text: "Tin nhắn đã bị thu hồi", image: "" } : msg
                 );
-
+                
                 await updateDoc(msgRef, { messages: updatedMessages });
-
-                if (isLastMessage) {
-                    updateChatListLastMessage("Tin nhắn đã bị thu hồi");
-                }
+                if (isLastMessage) { updateChatListLastMessage("Tin nhắn đã bị thu hồi"); }
             }
         } catch (error) { toast.error("Lỗi: " + error.message); }
     }
 
-    // Chuyển đổi Chat
     const handleSwitchChat = async (item) => {
         setChatUser(item);
         setMessagesId(item.messageId);
         setIsTyping(false);
         setOpenEmoji(false);
         setEditingMsg(null);
-        setInput(""); // Clear input khi chuyển chat
-        
+        setInput(""); 
+        if(inputRef.current) inputRef.current.style.height = "24px";
+
         if (!item.messageSeen) {
             try {
                 const userChatsRef = doc(db, 'chats', userData.id);
@@ -270,6 +262,9 @@ const ChatBox = () => {
         }
     }
 
+    const handleCall = () => toast.info("Tính năng Gọi thoại đang phát triển!");
+    const handleVideoCall = () => toast.info("Tính năng Gọi Video đang phát triển!");
+
 
     // --- 4. RENDER UI ---
     if (!chatUser) {
@@ -279,6 +274,18 @@ const ChatBox = () => {
                 <p>Chat anytime, anywhere</p>
             </div>
         )
+    }
+// === LOGIC LỌC TIN NHẮN THEO THỜI GIAN XÓA ===
+    let filteredMessages = messages;
+    
+    if (chatUser.resetTimestamp) {
+        filteredMessages = messages.filter(msg => {
+            // Lấy thời gian gửi của tin nhắn
+            const msgDate = msg.createdAt.toDate ? msg.createdAt.toDate().getTime() : new Date(msg.createdAt).getTime();
+            
+            // Chỉ hiện tin nhắn được gửi SAU KHI tạo đoạn chat này
+            return msgDate > chatUser.resetTimestamp;
+        });
     }
 
     return (
@@ -305,48 +312,38 @@ const ChatBox = () => {
                         {userProfile ? userProfile.name : "..."} 
                         {userProfile && Date.now() - userProfile.lastSeen <= 60000 && <img className='dot' src={assets.green_dot} alt="Online" />} 
                     </p>
-                    <img onClick={() => setRightSidebarVisible(true)} src={assets.help_icon} alt="Help" />
+                    <img onClick={handleCall} src={assets.phone_icon || "https://cdn-icons-png.flaticon.com/512/126/126509.png"} className="header-icon" alt="Call" />
+                    <img onClick={handleVideoCall} src={assets.video_icon || "https://cdn-icons-png.flaticon.com/512/4945/4945926.png"} className="header-icon" alt="Video Call" />
+                    <img onClick={() => setRightSidebarVisible(true)} src={assets.help_icon} alt="Help" className="header-icon" />
                 </div>
 
                 {/* MESSAGES LIST */}
                 <div className="chat-msg">
-                    {isTyping && ( 
-                        <div className="typing-indicator">
-                            <div className="typing-dot"></div><div className="typing-dot"></div><div className="typing-dot"></div>
-                        </div> 
-                    )}
+                    {isTyping && ( <div className="typing-indicator"><div className="typing-dot"></div><div className="typing-dot"></div><div className="typing-dot"></div></div> )}
 
-                    {messages && messages.map((msg, index) => (
+                    {filteredMessages && filteredMessages.map((msg, index) => (
                         <div key={index} className={msg.sId === userData.id ? "s-msg" : "r-msg"}>
                             <div className="msg-container">
                                 {msg.image && !msg.isDeleted 
-                                    ? <img className='msg-img' src={msg.image} alt="" onClick={() => setZoomImage(msg.image)} /> 
+                                    ? <img className='msg-img' src={msg.image} alt="" onClick={() => setAppFullImage(msg.image)} /> 
                                     : <div style={{display:'flex', flexDirection:'column'}}>
-                                        <p className={`msg ${msg.isDeleted ? "deleted" : ""}`}>
-                                            {msg.text}
-                                        </p>
+                                        <p className={`msg ${msg.isDeleted ? "deleted" : ""}`}>{msg.text}</p>
                                         {msg.isEdited && !msg.isDeleted && <span className="edited-label">(đã sửa)</span>}
                                       </div>
                                 }
                                 
-                                {/* Message Actions */}
                                 <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
-                                    {/* Delete Button */}
                                     {msg.sId === userData.id && !msg.isDeleted && msg.msgId && (
                                         <img onClick={() => deleteMessage(msg.msgId)} src={assets.trash_icon || "https://cdn-icons-png.flaticon.com/512/3405/3405244.png"} className="delete-btn" alt="Xóa" title="Thu hồi" />
                                     )}
-                                    {/* Edit Button */}
                                     {msg.sId === userData.id && !msg.isDeleted && msg.msgId && !msg.image && (
                                         <img onClick={() => handleEditClick(msg)} src={assets.edit_icon || "https://cdn-icons-png.flaticon.com/512/1159/1159633.png"} className="edit-btn" alt="Sửa" title="Chỉnh sửa" />
                                     )}
-                                    {/* Info Button */}
                                     {!msg.isDeleted && (
                                         <img onClick={() => setMsgInfo(msg)} src={assets.info_icon || "https://cdn-icons-png.flaticon.com/512/1101/1101366.png"} className="info-btn" alt="Chi tiết" title="Chi tiết tin nhắn" />
                                     )}
                                 </div>
                             </div>
-                            
-                            {/* Time & Avatar */}
                             <div>
                                 <img src={msg.sId === userData.id ? userData.avatar : chatUser.userData.avatar} alt="" />
                                 <p>{convertTimestamp(msg.createdAt)}</p>
@@ -355,7 +352,7 @@ const ChatBox = () => {
                     ))}
                 </div>
 
-                {/* INPUT AREA */}
+                {/* INPUT AREA (Đã chuyển sang Textarea) */}
                 <div className={`chat-input ${editingMsg ? "editing" : ""}`}>
                     {editingMsg && <span className="cancel-edit" onClick={cancelEdit}>Hủy sửa ✕</span>}
 
@@ -398,12 +395,6 @@ const ChatBox = () => {
                         <p><strong>Trạng thái:</strong> {msgInfo.isDeleted ? "Đã thu hồi" : (msgInfo.isEdited ? "Đã chỉnh sửa" : "Đã gửi")}</p>
                         <button onClick={() => setMsgInfo(null)}>Đóng</button>
                     </div>
-                </div>
-            )}
-            {zoomImage && (
-                <div className="image-zoom-overlay" onClick={() => setZoomImage(null)}>
-                    <span className="close-zoom-btn" onClick={() => setZoomImage(null)}>&times;</span>
-                    <img className="image-zoom-content" src={zoomImage} alt="Zoom" onClick={(e) => e.stopPropagation()} />
                 </div>
             )}
         </div>

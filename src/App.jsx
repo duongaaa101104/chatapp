@@ -10,7 +10,7 @@ import { auth } from './config/firebase'
 import { AppContext } from './context/AppContext'
 const App = () => {
   const navigate = useNavigate();
-  const {loadUserData} =useContext(AppContext)
+  const {loadUserData, appFullImage, setAppFullImage} =useContext(AppContext)
 
   useEffect(()=>{
     onAuthStateChanged(auth,async(user)=>{
@@ -30,6 +30,18 @@ const App = () => {
         <Route path="/chat" element={<Chat />} />
         <Route path="/profile" element={<ProfileUpdate />} />
       </Routes>
+      {appFullImage && (
+        <div className="image-zoom-overlay" onClick={() => setAppFullImage(null)}>
+            <span className="close-zoom-btn" onClick={() => setAppFullImage(null)}>&times;</span>
+            <img 
+                className="image-zoom-content" 
+                src={appFullImage} 
+                alt="Full View" 
+                onClick={(e) => e.stopPropagation()} 
+            />
+        </div>
+      )}
+
     </>
   )
 }

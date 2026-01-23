@@ -65,7 +65,12 @@
 /* Icons Header */
 .chat-user .arrow { display: none; width: 25px; cursor: pointer; margin-right: 5px; }
 .chat-user img[alt="Help"] { width: 25px; cursor: pointer; }
-
+.header-icon[alt="Call"]:hover {
+    filter: invert(36%) sepia(90%) saturate(2335%) hue-rotate(90deg) brightness(86%) contrast(92%); /* Màu xanh lá */
+}
+.header-icon[alt="Video Call"]:hover {
+    filter: invert(36%) sepia(90%) saturate(2335%) hue-rotate(200deg) brightness(86%) contrast(92%); /* Màu xanh dương */
+}
 
 /* ========================================================= */
 /* 3. KHUNG TIN NHẮN (MESSAGE LIST)                          */
@@ -337,3 +342,4 @@
 .msg-img {
     cursor: zoom-in; /* Biến thành hình kính lúp */
 }
+

@@ -5,7 +5,7 @@ import { logout } from '../../config/firebase'
 import { AppContext } from '../../context/AppContext'
 const RightSidebar = () => {
 
-  const { chatUser, messages, rightSidebarVisible, setRightSidebarVisible } = useContext(AppContext);
+  const { chatUser, messages, rightSidebarVisible, setRightSidebarVisible ,setAppFullImage } = useContext(AppContext);
   const [msgImages, setMsgImages] = useState([]);
 
 
@@ -35,7 +35,7 @@ const RightSidebar = () => {
       <div className="rs-media">
         <p>Hình ảnh</p>
         <div>
-          {msgImages.map((url, index) => (<img onClick={() => window.open(url)} key={index} src={url} alt='' />))}
+          {msgImages.map((url, index) => (<img onClick={() => setAppFullImage(url)} key={index} src={url} alt='' />))}
         </div>
         
       </div>
